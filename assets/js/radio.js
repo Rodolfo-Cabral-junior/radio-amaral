@@ -1,6 +1,7 @@
 /**
  * RÁDIO WEB AMARAL — Lógica Principal
  * Utiliza a YouTube IFrame API com dois players para crossfade suave.
+ * Inclui: Media Session API, Wake Lock API e Visibility API.
  * Todos os comentários estão em português.
  */
 
@@ -36,8 +37,13 @@ let playlist = [];
 
 /** ID do intervalo do progresso */
 let progressInterval = null;
+
 /** Controla se a vinheta de abertura já foi tocada */
 let vinhetaTocada = false;
+
+/** Referência ao Wake Lock ativo */
+let wakeLock = null;
+
 /* =========================================================
    REFERÊNCIAS AO DOM
    ========================================================= */
@@ -56,6 +62,175 @@ const elVolumeSlider = document.getElementById('volume-slider');
 const elVolumeLabel = document.getElementById('volume-label');
 /** Elemento de áudio da vinheta de abertura */
 const elAudioVinheta = document.getElementById('audio-vinheta');
+
+/* =========================================================
+   WAKE LOCK API
+   Mantém o dispositivo ativo enquanto a rádio toca.
+   Funciona no Android Chrome e alguns navegadores modernos.
+   ========================================================= */
+
+/**
+ * Solicita o Wake Lock para evitar que o dispositivo suspenda.
+ */
+async function ativarWakeLock() {
+    if (!('wakeLock' in navigator)) return; /* Não suportado */
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        console.log('Wake Lock ativado.');
+
+        /* Quando o sistema libera o wake lock (ex: tela desliga),
+           tenta reativar automaticamente se ainda estiver tocando. */
+        wakeLock.addEventListener('release', function () {
+            console.log('Wake Lock liberado pelo sistema.');
+            if (isPlaying) ativarWakeLock();
+        });
+    } catch (err) {
+        console.warn('Wake Lock não disponível:', err.message);
+    }
+}
+
+/**
+ * Libera o Wake Lock quando a rádio for pausada.
+ */
+async function liberarWakeLock() {
+    if (wakeLock) {
+        try {
+            await wakeLock.release();
+            wakeLock = null;
+            console.log('Wake Lock liberado manualmente.');
+        } catch (err) {
+            console.warn('Erro ao liberar Wake Lock:', err.message);
+        }
+    }
+}
+
+/* =========================================================
+   VISIBILITY API
+   Detecta quando o usuário sai/volta ao app e tenta retomar.
+   ========================================================= */
+
+/**
+ * Registra o listener de visibilidade da página.
+ * Quando o usuário volta ao app após sair, verifica se a rádio
+ * estava tocando e retoma automaticamente se necessário.
+ */
+function registrarVisibilityAPI() {
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+            console.log('App voltou ao foco.');
+
+            /* Reativa o Wake Lock se necessário */
+            if (isPlaying && !wakeLock) {
+                ativarWakeLock();
+            }
+
+            /* Verifica se o player parou enquanto o app estava em background */
+            const player = getPlayerAtivo();
+            if (player && isPlaying) {
+                const state = player.getPlayerState();
+                /* Se não estiver tocando (parado, pausado ou em buffer), retoma */
+                if (state !== YT.PlayerState.PLAYING && state !== YT.PlayerState.BUFFERING) {
+                    console.log('Player parado em background. Retomando...');
+                    player.playVideo();
+                    if (!progressInterval) startProgress();
+                }
+            }
+        } else {
+            console.log('App foi para background.');
+        }
+    });
+}
+
+/* =========================================================
+   MEDIA SESSION API
+   Registra a rádio como mídia do sistema operacional.
+   Aparece na tela de bloqueio, central de controle (iOS/Android)
+   e permite controle por fones de ouvido e smartwatches.
+   ========================================================= */
+
+/**
+ * Inicializa os handlers da Media Session API.
+ * Deve ser chamado uma única vez após os players estarem prontos.
+ */
+function inicializarMediaSession() {
+    if (!('mediaSession' in navigator)) {
+        console.warn('Media Session API não suportada neste navegador.');
+        return;
+    }
+
+    /* Registra as ações de controle de mídia do sistema */
+    navigator.mediaSession.setActionHandler('play', function () {
+        const player = getPlayerAtivo();
+        if (player) {
+            player.playVideo();
+            isPlaying = true;
+            updateIconePlay();
+            startProgress();
+            ativarWakeLock();
+            atualizarMediaSession();
+        }
+    });
+
+    navigator.mediaSession.setActionHandler('pause', function () {
+        const player = getPlayerAtivo();
+        if (player) {
+            player.pauseVideo();
+            clearInterval(progressInterval);
+            progressInterval = null;
+            isPlaying = false;
+            updateIconePlay();
+            liberarWakeLock();
+            atualizarMediaSession();
+        }
+    });
+
+    navigator.mediaSession.setActionHandler('nexttrack', function () {
+        nextTrack();
+    });
+
+    navigator.mediaSession.setActionHandler('previoustrack', function () {
+        prevTrack();
+    });
+
+    /* Stop — alguns dispositivos enviam essa ação */
+    navigator.mediaSession.setActionHandler('stop', function () {
+        const player = getPlayerAtivo();
+        if (player) {
+            player.stopVideo();
+            clearInterval(progressInterval);
+            progressInterval = null;
+            isPlaying = false;
+            updateIconePlay();
+            liberarWakeLock();
+        }
+    });
+
+    console.log('Media Session API inicializada.');
+}
+
+/**
+ * Atualiza os metadados exibidos na tela de bloqueio e central de controle.
+ * Deve ser chamado sempre que a faixa mudar.
+ */
+function atualizarMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    if (!playlist.length) return;
+
+    const faixa = playlist[currentIndex];
+    const thumbUrl = 'https://img.youtube.com/vi/' + faixa.id + '/hqdefault.jpg';
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title: faixa.title,
+        artist: faixa.artist,
+        album: 'Rádio Web Amaral',
+        artwork: [
+            { src: thumbUrl, sizes: '480x360', type: 'image/jpeg' }
+        ]
+    });
+
+    /* Atualiza estado de reprodução */
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+}
 
 /* =========================================================
    INICIALIZAÇÃO DA YOUTUBE IFRAME API
@@ -152,25 +327,31 @@ function onPlayerAReady() {
 
     /* Conecta os eventos dos controles */
     vincularEventos();
+
+    /* Inicializa Media Session API */
+    inicializarMediaSession();
+
+    /* Registra Visibility API */
+    registrarVisibilityAPI();
+
+    /* Atualiza metadados iniciais na tela de bloqueio */
+    atualizarMediaSession();
 }
 
 /**
  * Monitora mudanças de estado do player ativo.
- * Não é necessário tratar o fim manual aqui pois o crossfade
- * é acionado pela verificação de 90% no startProgress().
  */
 function onPlayerStateChange(event) {
-    /* YT.PlayerState.PLAYING === 1 */
     if (event.data === YT.PlayerState.PLAYING) {
         isPlaying = true;
         updateIconePlay();
+        atualizarMediaSession();
     }
-    /* YT.PlayerState.PAUSED === 2 ou ENDED === 0 */
     if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
-        /* Só marca como parado se não estiver em crossfade */
         if (!crossfading) {
             isPlaying = false;
             updateIconePlay();
+            atualizarMediaSession();
         }
     }
 }
@@ -202,6 +383,7 @@ function togglePlay() {
         clearInterval(progressInterval);
         progressInterval = null;
         isPlaying = false;
+        liberarWakeLock();
     } else {
         /* Retoma ou inicia a reprodução */
         const state = player.getPlayerState();
@@ -213,9 +395,11 @@ function togglePlay() {
         }
         isPlaying = true;
         startProgress();
+        ativarWakeLock();
     }
 
     updateIconePlay();
+    atualizarMediaSession();
 }
 
 /**
@@ -254,6 +438,8 @@ function playTrack(index) {
     updateUI();
     updateIconePlay();
     startProgress();
+    ativarWakeLock();
+    atualizarMediaSession();
 }
 
 /**
@@ -278,62 +464,59 @@ function prevTrack() {
 
 /**
  * Toca a vinheta de abertura uma única vez.
- * Durante a vinheta:
- *   - Música de fundo (primeira faixa) toca em volume 20%
- *   - Exibe mensagem de boas-vindas na UI
- * Ao terminar:
- *   - Fade out da música de fundo (2 segundos)
- *   - Inicia a playlist normalmente com playTrack(0)
  */
 function tocarVinheta() {
     if (!playerA) return;
 
-    /* Define thumbnail e textos de boas-vindas */
     const idFundoVinheta = playlist[0].id;
     elThumbnail.src = 'https://img.youtube.com/vi/' + idFundoVinheta + '/mqdefault.jpg';
     elThumbnail.alt = 'Rádio Web Amaral no ar!';
     elTrackTitle.textContent = 'Rádio Web Amaral no ar!';
     elTrackArtist.textContent = 'Bem-vindo!';
 
-    /* Ativa indicador visual de vinheta */
     elCrossfadeInd.classList.add('vinheta-ativa');
     elCrossfadeInd.classList.add('ativo');
     elCrossfadeInd.querySelector('.crossfade-text').textContent = 'Vinheta de abertura';
 
-    /* Mostra ícone de pause (a rádio está "tocando" a vinheta) */
     isPlaying = true;
     updateIconePlay();
+    ativarWakeLock();
 
-    /* Carrega música de fundo no playerA em volume baixo e inicia */
+    /* Atualiza Media Session com info da vinheta */
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: 'Rádio Web Amaral no ar!',
+            artist: 'Bem-vindo!',
+            album: 'Rádio Web Amaral',
+            artwork: [
+                { src: 'https://img.youtube.com/vi/' + idFundoVinheta + '/hqdefault.jpg', sizes: '480x360', type: 'image/jpeg' }
+            ]
+        });
+        navigator.mediaSession.playbackState = 'playing';
+    }
+
     playerA.setVolume(20);
     playerA.loadVideoById(idFundoVinheta);
 
-    /* Toca o áudio da vinheta */
     if (elAudioVinheta) {
         elAudioVinheta.currentTime = 0;
         elAudioVinheta.play().catch(function (err) {
             console.warn('Não foi possível tocar a vinheta:', err);
         });
-
-        /* Quando a vinheta terminar, faz fade out e inicia playlist */
         elAudioVinheta.addEventListener('ended', finalizarVinheta, { once: true });
     } else {
-        /* Se não houver arquivo de vinheta, inicia playlist diretamente */
         finalizarVinheta();
     }
 }
 
 /**
  * Executada quando o áudio da vinheta termina.
- * Faz fade out da música de fundo em 2 segundos e inicia a playlist.
  */
 function finalizarVinheta() {
-    /* Remove indicador de vinheta */
     elCrossfadeInd.classList.remove('vinheta-ativa');
     elCrossfadeInd.classList.remove('ativo');
     elCrossfadeInd.querySelector('.crossfade-text').textContent = 'Crossfade ativo';
 
-    /* Fade out da música de fundo: 20% → 0% em 2 segundos (8 passos × 250ms) */
     const passosFade = 8;
     const intervaloFade = 250;
     let passoAtual = 0;
@@ -347,7 +530,6 @@ function finalizarVinheta() {
         if (passoAtual >= passosFade) {
             clearInterval(fadeOut);
             playerA.stopVideo();
-            /* Restaura volume principal e inicia playlist normalmente */
             playerA.setVolume(volume);
             playTrack(0);
         }
@@ -360,17 +542,14 @@ function finalizarVinheta() {
 
 /**
  * Inicia o intervalo de atualização da barra de progresso (500ms).
- * Também detecta o momento de iniciar o crossfade (90% da música).
  */
 function startProgress() {
-    /* Evita múltiplos intervalos */
     if (progressInterval) clearInterval(progressInterval);
 
     progressInterval = setInterval(function () {
         const player = getPlayerAtivo();
         if (!player) return;
 
-        /* Estado atual do player */
         const state = player.getPlayerState();
         if (state !== YT.PlayerState.PLAYING) return;
 
@@ -379,15 +558,23 @@ function startProgress() {
 
         if (duration <= 0) return;
 
-        /* Calcula porcentagem e atualiza barra */
         const pct = (current / duration) * 100;
         elProgressFill.style.width = pct.toFixed(2) + '%';
 
-        /* Atualiza tempos exibidos */
         elTimeCurrent.textContent = formatTime(current);
         elTimeTotal.textContent = formatTime(duration);
 
-        /* Dispara crossfade ao atingir 90% (só uma vez por faixa) */
+        /* Atualiza posição na Media Session (para scrubbing na tela de bloqueio) */
+        if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
+            try {
+                navigator.mediaSession.setPositionState({
+                    duration: duration,
+                    playbackRate: 1,
+                    position: current
+                });
+            } catch (e) { /* Ignora erros de posição inválida */ }
+        }
+
         if (pct >= 90 && !crossfading) {
             startCrossfade();
         }
@@ -396,71 +583,50 @@ function startProgress() {
 
 /**
  * Realiza o crossfade entre o player ativo e o próximo.
- * - Carrega a próxima música no player inativo (volume 0)
- * - Em 20 passos de 500ms (10s):
- *     fade out player atual: 100% → 0%
- *     fade in  próximo:        0% → 100%
- * - Ao final: troca activePlayer e atualiza currentIndex
  */
 function startCrossfade() {
     if (crossfading) return;
     crossfading = true;
 
-    /* Calcula próximo índice */
     nextIndex = (currentIndex + 1) % playlist.length;
 
-    /* Determina player ativo e inativo */
     const playerAtual = getPlayerAtivo();
     const playerProximo = getPlayerInativo();
 
     if (!playerAtual || !playerProximo) return;
 
-    /* Ativa indicador visual no rodapé */
     ativarIndicadorCrossfade();
 
-    /* Carrega a próxima música no player inativo, volume 0 */
     playerProximo.setVolume(0);
     playerProximo.loadVideoById(playlist[nextIndex].id);
 
-    /* Atualiza UI imediatamente com dados da próxima faixa */
-    /* (thumbnail e título trocam ao iniciar o fade) */
-
-    const passosTotais = 20;       /* 20 × 500ms = 10 segundos */
+    const passosTotais = 20;
     const intervaloMs = 500;
     let passo = 0;
 
     const fadeInterval = setInterval(function () {
         passo++;
 
-        /* Proporção: 0.0 (início) → 1.0 (fim) */
         const proporcao = passo / passosTotais;
-
-        /* Volume do player atual: decresce de volume → 0 */
         const volAtual = Math.round(volume * (1 - proporcao));
-        /* Volume do próximo: cresce de 0 → volume */
         const volProximo = Math.round(volume * proporcao);
 
         playerAtual.setVolume(Math.max(0, volAtual));
         playerProximo.setVolume(Math.min(volume, volProximo));
 
-        /* Atualiza UI na metade do crossfade */
         if (passo === Math.floor(passosTotais / 2)) {
             currentIndex = nextIndex;
             updateUI();
+            atualizarMediaSession(); /* Atualiza tela de bloqueio na troca de faixa */
         }
 
-        /* Fim do crossfade */
         if (passo >= passosTotais) {
             clearInterval(fadeInterval);
 
-            /* Para o player anterior */
             playerAtual.stopVideo();
             playerAtual.setVolume(0);
-
-            /* Garante volume correto no player que entrou */
             playerProximo.setVolume(volume);
 
-            /* Troca o player ativo */
             activePlayer = activePlayer === 'a' ? 'b' : 'a';
             currentIndex = nextIndex;
             nextIndex = (currentIndex + 1) % playlist.length;
@@ -468,8 +634,8 @@ function startCrossfade() {
             crossfading = false;
             desativarIndicadorCrossfade();
 
-            /* Atualiza UI final */
             updateUI();
+            atualizarMediaSession();
         }
     }, intervaloMs);
 }
@@ -487,7 +653,6 @@ function setVolume(value) {
     const player = getPlayerAtivo();
     if (player) player.setVolume(volume);
 
-    /* Atualiza label e preenchimento visual do slider */
     elVolumeLabel.textContent = volume + '%';
     elVolumeSlider.style.backgroundSize = volume + '% 100%';
 }
@@ -504,15 +669,12 @@ function updateUI() {
 
     const faixa = playlist[currentIndex];
 
-    /* Thumbnail do YouTube */
     elThumbnail.src = 'https://img.youtube.com/vi/' + faixa.id + '/hqdefault.jpg';
     elThumbnail.alt = faixa.title + ' — ' + faixa.artist;
 
-    /* Título e artista */
     elTrackTitle.textContent = faixa.title;
     elTrackArtist.textContent = faixa.artist;
 
-    /* Marca item ativo na playlist */
     const itens = elPlaylistList.querySelectorAll('.playlist-item');
     itens.forEach(function (item, i) {
         item.classList.toggle('active', i === currentIndex);
@@ -545,7 +707,6 @@ function renderizarPlaylist() {
             '<span class="playlist-item-title">' + escapeHtml(faixa.title) + '</span>' +
             '<span class="playlist-item-artist">' + escapeHtml(faixa.artist) + '</span>';
 
-        /* Clique no item toca a música */
         li.addEventListener('click', function () {
             playTrack(index);
         });
@@ -572,31 +733,18 @@ function desativarIndicadorCrossfade() {
    UTILITÁRIOS
    ========================================================= */
 
-/**
- * Retorna o player YouTube atualmente ativo.
- * @returns {YT.Player|null}
- */
 function getPlayerAtivo() {
     if (activePlayer === 'a') return playerA;
     if (activePlayer === 'b') return playerB;
     return null;
 }
 
-/**
- * Retorna o player YouTube atualmente inativo (para crossfade).
- * @returns {YT.Player|null}
- */
 function getPlayerInativo() {
     if (activePlayer === 'a') return playerB;
     if (activePlayer === 'b') return playerA;
     return null;
 }
 
-/**
- * Formata segundos para string "M:SS".
- * @param {number} segundos
- * @returns {string}
- */
 function formatTime(segundos) {
     if (!segundos || isNaN(segundos)) return '0:00';
     const min = Math.floor(segundos / 60);
@@ -604,11 +752,6 @@ function formatTime(segundos) {
     return min + ':' + (sec < 10 ? '0' : '') + sec;
 }
 
-/**
- * Escapa caracteres HTML para evitar injeção de tags na playlist.
- * @param {string} texto
- * @returns {string}
- */
 function escapeHtml(texto) {
     return String(texto)
         .replace(/&/g, '&amp;')
@@ -622,25 +765,14 @@ function escapeHtml(texto) {
    VINCULAÇÃO DE EVENTOS DOS CONTROLES
    ========================================================= */
 
-/**
- * Conecta todos os botões e controles da interface.
- * Chamado após os players estarem prontos.
- */
 function vincularEventos() {
-    /* Botão play/pause */
     elBtnPlay.addEventListener('click', togglePlay);
-
-    /* Botão próxima */
     document.getElementById('btn-next').addEventListener('click', nextTrack);
-
-    /* Botão anterior */
     document.getElementById('btn-prev').addEventListener('click', prevTrack);
 
-    /* Slider de volume */
     elVolumeSlider.addEventListener('input', function () {
         setVolume(this.value);
     });
 
-    /* Sincroniza estado visual inicial do slider */
     setVolume(elVolumeSlider.value);
 }
