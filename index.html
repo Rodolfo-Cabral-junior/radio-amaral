@@ -5,6 +5,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rádio Web Amaral</title>
+
+    <!-- PWA: Manifest -->
+    <link rel="manifest" href="manifest.json" />
+
+    <!-- PWA: Theme color (barra do navegador e status bar Android) -->
+    <meta name="theme-color" content="#0f0f0f" />
+
+    <!-- PWA: Modo standalone no iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Rádio Amaral" />
+
+    <!-- PWA: Ícone para iOS (Add to Home Screen) -->
+    <link rel="apple-touch-icon" href="logoradio.jpeg" />
+
+    <!-- SEO básico -->
+    <meta name="description" content="Rádio Web Amaral — música boa o tempo todo." />
+
     <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 
@@ -12,6 +30,17 @@
 
     <!-- Cabeçalho com logo -->
     <header class="header">
+        <!-- Microfone decorativo SVG -->
+        <svg class="mic-decor" aria-hidden="true" viewBox="0 0 24 24" fill="none"
+            xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+            <rect x="9" y="2" width="6" height="11" rx="3" fill="rgba(201,168,76,0.25)" />
+            <path d="M5 11a7 7 0 0 0 14 0" stroke="rgba(201,168,76,0.35)" stroke-width="1.5"
+                stroke-linecap="round" fill="none" />
+            <line x1="12" y1="18" x2="12" y2="22" stroke="rgba(201,168,76,0.3)" stroke-width="1.5"
+                stroke-linecap="round" />
+            <line x1="9" y1="22" x2="15" y2="22" stroke="rgba(201,168,76,0.3)" stroke-width="1.5"
+                stroke-linecap="round" />
+        </svg>
         <img src="logoradio.jpeg" alt="Logo Rádio Amaral" class="logo" />
         <h1 class="station-name">RÁDIO WEB AMARAL</h1>
     </header>
@@ -45,19 +74,22 @@
 
             <!-- Controles de reprodução -->
             <div class="controls">
+                <!-- Ondas de áudio animadas (visíveis quando tocando) -->
+                <div class="audio-wave" id="audio-wave" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span><span></span>
+                    <span></span><span></span><span></span><span></span><span></span>
+                    <span></span>
+                </div>
                 <button class="btn-control" id="btn-prev" title="Anterior" aria-label="Música anterior">
-                    <!-- Ícone: pular anterior -->
                     <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
                         <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
                     </svg>
                 </button>
 
                 <button class="btn-play" id="btn-play" title="Play/Pause" aria-label="Play ou Pause">
-                    <!-- Ícone play (visível por padrão) -->
                     <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor" width="40" height="40">
                         <path d="M8 5v14l11-7z" />
                     </svg>
-                    <!-- Ícone pause (oculto por padrão) -->
                     <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="40" height="40"
                         style="display:none">
                         <path d="M6 19h4V5H6zm8-14v14h4V5z" />
@@ -65,7 +97,6 @@
                 </button>
 
                 <button class="btn-control" id="btn-next" title="Próxima" aria-label="Próxima música">
-                    <!-- Ícone: pular próxima -->
                     <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
                         <path d="M6 18l8.5-6L6 6zm8.5-6 3.5 2.4V9.6z M16 6h2v12h-2z" />
                     </svg>
@@ -117,6 +148,39 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- Lógica principal da rádio -->
     <script src="assets/js/radio.js"></script>
+
+    <!-- Ativa/desativa ondas de áudio sincronizadas com o botão play -->
+    <script>
+        (function () {
+            var wave = document.getElementById('audio-wave');
+            var btnPlay = document.getElementById('btn-play');
+            if (!wave || !btnPlay) return;
+            /* Observa cliques no botão play para alternar classe .playing */
+            btnPlay.addEventListener('click', function () {
+                /* Aguarda o próximo frame para ler o estado atualizado do ícone */
+                requestAnimationFrame(function () {
+                    var pauseIcon = document.getElementById('icon-pause');
+                    var tocando = pauseIcon && pauseIcon.style.display !== 'none';
+                    wave.classList.toggle('playing', tocando);
+                });
+            });
+        })();
+    </script>
+
+    <!-- Registro do Service Worker (PWA) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(function (reg) {
+                        console.log('[PWA] Service Worker registrado:', reg.scope);
+                    })
+                    .catch(function (err) {
+                        console.warn('[PWA] Falha ao registrar Service Worker:', err);
+                    });
+            });
+        }
+    </script>
 
 </body>
 
