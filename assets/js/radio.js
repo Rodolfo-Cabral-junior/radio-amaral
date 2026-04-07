@@ -311,7 +311,10 @@ function criarPlayers() {
             origin: window.location.origin || 'http://localhost'
         },
         events: {
-            onReady: function () { /* Player B pronto, aguarda uso */ }
+            onReady: function () { /* Player B pronto, aguarda uso */ },
+            /* Player B também precisa de onStateChange: quando o crossfade
+               torna B o player ativo, seus eventos devem atualizar a UI. */
+            onStateChange: onPlayerStateChange
         }
     });
 }
