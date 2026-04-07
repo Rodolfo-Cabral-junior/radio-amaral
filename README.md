@@ -110,3 +110,4 @@ startCrossfade()
 ---
 
 &copy; 2026 Rádio Web Amaral
+ 
