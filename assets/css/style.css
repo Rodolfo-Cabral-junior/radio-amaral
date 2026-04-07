@@ -1,6 +1,6 @@
 /* =========================================================
    RÁDIO WEB AMARAL — Visual Gospel Profissional
-   Background: assets/background.png + overlay + glassmorphism dourado
+   Background: background.png (raiz do projeto) + overlay + glassmorphism dourado
    ========================================================= */
 
 /* ---------- Reset básico ---------- */
@@ -36,7 +36,7 @@ html {
 
 body {
   /* Imagem de fundo fixa cobrindo toda a página */
-  background-image: url('../background.png');
+  background-image: url('/background.png');
   background-size: cover;
   background-position: center center;
   background-attachment: fixed;
