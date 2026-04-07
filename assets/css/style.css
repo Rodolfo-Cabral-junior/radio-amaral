@@ -41,7 +41,7 @@ body {
   background-position: center center;
   background-attachment: fixed;
   background-repeat: no-repeat;
-  background-color: #0a0a1e; /* fallback se a imagem não carregar */
+  background-color: #0a0a2e; /* fallback se a imagem não carregar */
   color: var(--white);
   font-family: var(--font);
   min-height: 100%;
