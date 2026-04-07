@@ -1,0 +1,475 @@
+/* =========================================================
+   RÁDIO WEB AMARAL — Folha de Estilos Principal
+   Identidade: preto #0a0a0a | azul neon #00BFFF | vermelho #CC0000 | branco #FFFFFF
+   ========================================================= */
+
+/* ---------- Reset básico ---------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---------- Variáveis CSS ---------- */
+:root {
+  --bg:          #0a0a0a;
+  --surface:     #141414;
+  --surface2:    #1c1c1c;
+  --neon:        #00BFFF;
+  --neon-dim:    rgba(0, 191, 255, 0.15);
+  --red:         #CC0000;
+  --white:       #FFFFFF;
+  --gray:        #888888;
+  --gray-dark:   #2a2a2a;
+  --radius:      12px;
+  --font:        'Segoe UI', Arial, sans-serif;
+  --transition:  0.25s ease;
+}
+
+/* ---------- Base ---------- */
+html, body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--white);
+  font-family: var(--font);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ---------- Cabeçalho / Logo ---------- */
+.header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 16px;
+  gap: 12px;
+}
+
+.logo {
+  max-width: 220px;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  object-fit: contain;
+  /* Sombra neon sutil na logo */
+  filter: drop-shadow(0 0 10px rgba(0, 191, 255, 0.4));
+}
+
+.station-name {
+  font-size: clamp(1.2rem, 4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--neon);
+  text-shadow: 0 0 18px rgba(0, 191, 255, 0.6);
+}
+
+/* ---------- Layout principal ---------- */
+.main-content {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 24px;
+  width: 100%;
+  max-width: 1000px;
+  padding: 16px 20px 32px;
+}
+
+/* ---------- Card do Player ---------- */
+.player-card {
+  flex: 1 1 380px;
+  background: var(--surface);
+  border: 1px solid rgba(0, 191, 255, 0.25);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 0 30px rgba(0, 191, 255, 0.08);
+}
+
+/* Thumbnail 16:9 */
+.thumbnail-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--gray-dark);
+}
+
+.thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity var(--transition);
+}
+
+/* Overlay gradiente escuro sobre a thumbnail */
+.thumbnail-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  pointer-events: none;
+}
+
+/* ---------- Informações da faixa ---------- */
+.track-info {
+  text-align: center;
+}
+
+.track-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-artist {
+  font-size: 0.9rem;
+  color: var(--gray);
+}
+
+/* ---------- Barra de progresso ---------- */
+.progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.time-current,
+.time-total {
+  font-size: 0.75rem;
+  color: var(--gray);
+  min-width: 34px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-bar-track {
+  flex: 1;
+  height: 5px;
+  background: var(--gray-dark);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--neon);
+  border-radius: 99px;
+  transition: width 0.4s linear;
+  box-shadow: 0 0 8px var(--neon);
+}
+
+/* ---------- Controles de reprodução ---------- */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+/* Botão anterior / próxima */
+.btn-control {
+  background: transparent;
+  border: none;
+  color: var(--white);
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition), transform var(--transition);
+}
+
+.btn-control:hover {
+  color: var(--red);
+  transform: scale(1.15);
+}
+
+/* Botão play/pause — destaque em neon */
+.btn-play {
+  background: var(--neon);
+  border: none;
+  color: var(--bg);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(0, 191, 255, 0.5);
+  transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+
+.btn-play:hover {
+  background: var(--red);
+  box-shadow: 0 0 24px rgba(204, 0, 0, 0.6);
+  transform: scale(1.08);
+}
+
+.btn-play:active {
+  transform: scale(0.96);
+}
+
+/* ---------- Controle de volume ---------- */
+.volume-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.volume-icon {
+  color: var(--gray);
+  flex-shrink: 0;
+}
+
+.volume-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--gray-dark);
+  border-radius: 99px;
+  outline: none;
+  cursor: pointer;
+  /* Trilha preenchida via JS (background-size) */
+  background-image: linear-gradient(var(--neon), var(--neon));
+  background-repeat: no-repeat;
+  background-size: 80% 100%; /* sincronizado com valor inicial 80 */
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--neon);
+  box-shadow: 0 0 6px var(--neon);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--neon);
+  border: none;
+  cursor: pointer;
+}
+
+.volume-label {
+  font-size: 0.75rem;
+  color: var(--gray);
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ---------- Painel de Playlist ---------- */
+.playlist-panel {
+  flex: 0 0 260px;
+  background: var(--surface);
+  border: 1px solid rgba(0, 191, 255, 0.15);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 480px;
+  box-shadow: 0 0 20px rgba(0, 191, 255, 0.05);
+}
+
+.playlist-title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--neon);
+  border-bottom: 1px solid var(--gray-dark);
+  padding-bottom: 8px;
+}
+
+.playlist-list {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* Scroll customizado */
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-dark) transparent;
+}
+
+.playlist-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.playlist-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.playlist-list::-webkit-scrollbar-thumb {
+  background: var(--gray-dark);
+  border-radius: 99px;
+}
+
+/* Item da playlist */
+.playlist-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.playlist-item:hover {
+  background: var(--surface2);
+}
+
+/* Item ativo destacado em neon */
+.playlist-item.active {
+  background: var(--neon-dim);
+  border-left: 3px solid var(--neon);
+  padding-left: 9px;
+}
+
+.playlist-item-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-item.active .playlist-item-title {
+  color: var(--neon);
+}
+
+.playlist-item-artist {
+  font-size: 0.75rem;
+  color: var(--gray);
+}
+
+/* ---------- Rodapé ---------- */
+.footer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-top: 1px solid var(--gray-dark);
+  margin-top: auto;
+}
+
+/* Indicador de crossfade */
+.crossfade-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;           /* inativo por padrão */
+  transition: opacity var(--transition);
+}
+
+/* Estado ativo: visível e dot piscando */
+.crossfade-indicator.ativo {
+  opacity: 1;
+}
+
+.crossfade-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--neon);
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px var(--neon);
+}
+
+/* Animação de piscar do dot */
+.crossfade-indicator.ativo .crossfade-dot {
+  animation: blink 0.8s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+.crossfade-text {
+  font-size: 0.75rem;
+  color: var(--neon);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.footer-copy {
+  font-size: 0.72rem;
+  color: var(--gray);
+}
+
+/* Vinheta: dot muda para vermelho e pisca mais rápido */
+.crossfade-indicator.vinheta-ativa .crossfade-dot {
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red);
+  animation: piscar 0.5s ease-in-out infinite;
+}
+
+.crossfade-indicator.vinheta-ativa .crossfade-text::before {
+  content: "Vinheta de abertura — ";
+}
+
+@keyframes piscar {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.1; }
+}
+
+/* ---------- Players YouTube ocultos ---------- */
+#yt-players-container {
+  position: fixed;
+  bottom: -9999px;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* ---------- Responsivo: Mobile ---------- */
+@media (max-width: 768px) {
+  .main-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .playlist-panel {
+    flex: unset;
+    max-height: 280px;
+  }
+
+  .btn-play {
+    width: 56px;
+    height: 56px;
+  }
+}

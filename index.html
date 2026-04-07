@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rádio Web Amaral</title>
+    <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+
+<body>
+
+    <!-- Cabeçalho com logo -->
+    <header class="header">
+        <img src="logoradio.jpeg" alt="Logo Rádio Amaral" class="logo" />
+        <h1 class="station-name">RÁDIO WEB AMARAL</h1>
+    </header>
+
+    <!-- Conteúdo principal: player + playlist -->
+    <main class="main-content">
+
+        <!-- Card do player -->
+        <section class="player-card">
+
+            <!-- Thumbnail do vídeo atual com overlay -->
+            <div class="thumbnail-wrapper">
+                <img id="thumbnail" src="" alt="Thumbnail da música atual" class="thumbnail" />
+                <div class="thumbnail-overlay"></div>
+            </div>
+
+            <!-- Informações da faixa atual -->
+            <div class="track-info">
+                <p class="track-title" id="track-title">Aguardando...</p>
+                <p class="track-artist" id="track-artist">—</p>
+            </div>
+
+            <!-- Barra de progresso -->
+            <div class="progress-wrapper">
+                <span class="time-current" id="time-current">0:00</span>
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                </div>
+                <span class="time-total" id="time-total">0:00</span>
+            </div>
+
+            <!-- Controles de reprodução -->
+            <div class="controls">
+                <button class="btn-control" id="btn-prev" title="Anterior" aria-label="Música anterior">
+                    <!-- Ícone: pular anterior -->
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+                        <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
+                    </svg>
+                </button>
+
+                <button class="btn-play" id="btn-play" title="Play/Pause" aria-label="Play ou Pause">
+                    <!-- Ícone play (visível por padrão) -->
+                    <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor" width="40" height="40">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                    <!-- Ícone pause (oculto por padrão) -->
+                    <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="40" height="40"
+                        style="display:none">
+                        <path d="M6 19h4V5H6zm8-14v14h4V5z" />
+                    </svg>
+                </button>
+
+                <button class="btn-control" id="btn-next" title="Próxima" aria-label="Próxima música">
+                    <!-- Ícone: pular próxima -->
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+                        <path d="M6 18l8.5-6L6 6zm8.5-6 3.5 2.4V9.6z M16 6h2v12h-2z" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Controle de volume -->
+            <div class="volume-wrapper">
+                <svg class="volume-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                    <path
+                        d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                </svg>
+                <input type="range" id="volume-slider" class="volume-slider" min="0" max="100" value="80"
+                    aria-label="Volume" />
+                <span class="volume-label" id="volume-label">80%</span>
+            </div>
+
+        </section>
+
+        <!-- Playlist lateral -->
+        <aside class="playlist-panel">
+            <h2 class="playlist-title">Playlist</h2>
+            <ul class="playlist-list" id="playlist-list">
+                <!-- Itens gerados dinamicamente pelo radio.js -->
+            </ul>
+        </aside>
+
+    </main>
+
+    <!-- Rodapé com indicador de crossfade -->
+    <footer class="footer">
+        <div id="crossfade-indicator" class="crossfade-indicator">
+            <span class="crossfade-dot"></span>
+            <span class="crossfade-text">Crossfade ativo</span>
+        </div>
+        <p class="footer-copy">&copy; 2026 Rádio Web Amaral</p>
+    </footer>
+
+    <!-- Players YouTube ocultos (A e B para crossfade) -->
+    <div id="yt-players-container" aria-hidden="true">
+        <div id="player-a"></div>
+        <div id="player-b"></div>
+    </div>
+
+    <!-- Áudio da vinheta de abertura (oculto) -->
+    <audio id="audio-vinheta" src="assets/audio/vinheta.ogg" preload="auto"></audio>
+
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <!-- Lógica principal da rádio -->
+    <script src="assets/js/radio.js"></script>
+
+</body>
+
+</html>
